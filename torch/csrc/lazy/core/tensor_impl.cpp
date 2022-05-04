@@ -6,6 +6,11 @@
 #include <c10/macros/Macros.h>
 #include <c10/util/irange.h>
 #include <torch/csrc/lazy/core/tensor_util.h>
+#include <torch/csrc/lazy/core/ir_builder.h>
+// I guess we will need to use one of IRBuilder methods here
+#include <torch/csrc/lazy/ts_backend/dynamic_ir.h>
+#include "ATen/core/SymIntArrayRef.h"
+
 
 namespace torch {
 namespace lazy {
@@ -82,6 +87,14 @@ LTCTensorImpl::LTCTensorImpl(LazyTensor&& tensor)
   // This is a temporary fix for a PyTorch core issue,
   // according to https://github.com/pytorch/xla/pull/2682.
   is_non_overlapping_and_dense_ = false;
+
+  auto rank = tensor_->shape().Get().sizes().size();
+  sym_sizes_.reserve(rank);
+  for (auto i: c10::irange(rank)) {
+    auto dim_node = MakeNode<SizeNode>(this->tensor_->GetIrValue(), i);
+    auto sn = std::make_shared<torch::lazy::SymbolicIntNode>(dim_node);
+    sym_sizes_.push_back(sn->toSymInt());
+  }
 }
 
 void LTCTensorImpl::set_tensor(const LazyTensorPtr& lazy_tensor) {
@@ -136,6 +149,12 @@ int64_t LTCTensorImpl::stride(int64_t d) const {
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   const_cast<LTCTensorImpl*>(this)->setup_size_properties();
   return c10::TensorImpl::stride(d);
+}
+
+//TODO: Note, we should be actually using TensorImpl::sym_sizes
+// but I'm trying to keep this PR standalone and small
+c10::SymIntArrayRef LTCTensorImpl::sym_sizes() const {
+  return c10::SymIntArrayRef(sym_sizes_.data(), sym_sizes_.size());
 }
 
 void LTCTensorImpl::setup_size_properties() {
