@@ -471,6 +471,14 @@ for method_name, method in inspect.getmembers(PyRRef):
         owner, returns a reference to the local value.
     """
     docstring = getattr(method, "__doc__", None)
+    #
+    # Hotfix for PyPy that missing docstring for __str__ method.
+    # Value is taken from CPython.
+    #
+    import sys
+    if 'PyPy' in sys.version:
+        if method_name == "__str__" and docstring is None:
+            docstring = "Return str(self)."
     assert docstring is not None, "RRef user-facing methods should all have docstrings."
 
     # Do surgery on pybind11 generated docstrings.
