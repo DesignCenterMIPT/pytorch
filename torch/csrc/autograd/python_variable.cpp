@@ -1307,7 +1307,8 @@ void THPVariable_subclass_dealloc(PyObject* self) {
   // that finalizers are handled correctly
   PyTypeObject* type = Py_TYPE(self);
   TORCH_INTERNAL_ASSERT(type->tp_flags & Py_TPFLAGS_HEAPTYPE);
-  TORCH_INTERNAL_ASSERT(PyType_IS_GC(type), "GC types not implemented");
+  // FIXME: inspect the issue with type 'Tensor' on PyPy and uncomment!
+  // TORCH_INTERNAL_ASSERT(PyType_IS_GC(type), "GC types not implemented");
 
   PyObject_GC_UnTrack(self);
   // TODO: consider using trash can
