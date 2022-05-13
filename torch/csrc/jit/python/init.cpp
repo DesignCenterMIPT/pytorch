@@ -512,7 +512,11 @@ void initJITBindings(PyObject* module) {
             ArgumentSpecCreator arg_spec_creator(*graph);
             Stack stack;
             stack.reserve(inputs.size()); // captures?
+#if !defined(PYPY_VERSION)
             for (auto& obj : inputs) {
+#else
+            for (auto obj : inputs) {
+#endif
               stack.push_back(toTypeInferredIValue(obj));
             }
             ArgumentSpec spec = arg_spec_creator.create(with_grad, stack);
@@ -533,7 +537,11 @@ void initJITBindings(PyObject* module) {
           [](std::shared_ptr<Graph>& graph, const py::tuple& inputs) {
             Stack stack;
             stack.reserve(inputs.size()); // captures?
+#if !defined(PYPY_VERSION)
             for (auto& obj : inputs) {
+#else
+            for (auto obj : inputs) {
+#endif
               stack.push_back(toTypeInferredIValue(obj));
             }
             auto g_inputs = graph->inputs();
@@ -553,7 +561,11 @@ void initJITBindings(PyObject* module) {
           [](std::shared_ptr<Graph>& graph, const py::tuple& inputs) {
             Stack stack;
             stack.reserve(inputs.size()); // captures?
+#if !defined(PYPY_VERSION)
             for (auto& obj : inputs) {
+#else
+            for (auto obj : inputs) {
+#endif
               stack.push_back(toTypeInferredIValue(obj));
             }
             auto g_inputs = graph->inputs();
@@ -571,7 +583,11 @@ void initJITBindings(PyObject* module) {
             Stack stack;
             stack.reserve(inputs.size() + 1); // captures?
             push(stack, model._ivalue());
+#if !defined(PYPY_VERSION)
             for (auto& obj : inputs) {
+#else
+            for (auto obj : inputs) {
+#endif
               stack.push_back(toTypeInferredIValue(obj));
             }
             auto traced = TraceGraph(graph, stack);

@@ -778,7 +778,11 @@ void initTensorExprBindings(PyObject* module) {
           [](TensorExprKernel& self, const py::tuple& inputs) {
             Stack stack;
             stack.reserve(inputs.size()); // captures?
+#if !defined(PYPY_VERSION)
             for (auto& obj : inputs) {
+#else
+            for (auto obj : inputs) {
+#endif
               stack.push_back(toTypeInferredIValue(obj));
             }
             auto g_inputs = self.graph()->inputs();
@@ -795,7 +799,11 @@ void initTensorExprBindings(PyObject* module) {
           [](TensorExprKernel& self, const py::tuple& inputs) {
             Stack stack;
             stack.reserve(inputs.size()); // captures?
+#if !defined(PYPY_VERSION)
             for (auto& obj : inputs) {
+#else
+            for (auto obj : inputs) {
+#endif
               stack.push_back(toTypeInferredIValue(obj));
             }
             auto g_inputs = self.graph()->inputs();
