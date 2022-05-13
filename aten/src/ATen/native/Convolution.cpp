@@ -1442,8 +1442,8 @@ at::Tensor _convolution(
         output = at::cat(outputs, 1);
       }
       break;
-#ifdef USE_MPS
     case ConvBackend::Mps:
+#ifdef USE_MPS
       TORCH_CHECK(input.options().type_equal(weight.options()),
                "Input type (", input.toString(), ") and weight type (", weight.toString(),
                ") should be the same");
@@ -1454,8 +1454,12 @@ at::Tensor _convolution(
       output = at::mps_convolution(input.contiguous(), weight, bias.defined() ? bias.contiguous() : bias,
                                      params.padding, params.stride, params.dilation,
                                      params.groups);
+#else
+      TORCH_INTERNAL_ASSERT(false, "MPS backend was selected in PyTorch without support");
+#endif
       break;
     case ConvBackend::MpsTranspose:
+#ifdef USE_MPS
       TORCH_CHECK(input.options().type_equal(weight.options()),
                "Input type (", input.toString(), ") and weight type (", weight.toString(),
                ") should be the same");
@@ -1469,8 +1473,10 @@ at::Tensor _convolution(
       if (bias.defined()) {
         output.add_(reshape_bias(input.dim(), bias));
       }
-      break;
+#else
+      TORCH_INTERNAL_ASSERT(false, "MPS backend was selected in PyTorch without support");
 #endif
+      break;
   }
 
   if (k == 3 && !input.is_mkldnn()) {
