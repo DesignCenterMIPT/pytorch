@@ -217,5 +217,11 @@ template <typename T> inline void destroy_without_gil(T *ptr) {
   }
 }
 
+#if defined(PYPY_VERSION)
+  #define AUTO_REF auto
+#else
+  #define AUTO_REF auto&
+#endif
+
 } // namespace impl
 } // namespace torch
