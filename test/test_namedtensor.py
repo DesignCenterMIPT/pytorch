@@ -149,6 +149,7 @@ class TestNamedTensor(TestCase):
             names65 = ['A' * i for i in range(1, 66)]
             x = factory([1] * 65, names=names64, device=device)
 
+    @unittest.skip("no sys.getrefcount()")
     def test_none_names_refcount(self, N=10):
         def scope():
             unnamed = torch.empty(2, 3)
@@ -1379,7 +1380,7 @@ class TestNamedTensor(TestCase):
             (create('N:2,None:3'), (create('2,3') > 0).rename('N', 'C'), 3.14),
             maybe_raises_regex="not the same as the computed output names")
 
-
+    @unittest.skip("no sys.getrefcount()")
     def test_using_seen_interned_string_doesnt_bump_refcount(self):
         def see_name():
             seen_name = 'N'
@@ -1394,6 +1395,7 @@ class TestNamedTensor(TestCase):
         new_refcnt = sys.getrefcount(seen_name)
         self.assertEqual(new_refcnt, old_refcnt)
 
+    @unittest.skip("no sys.getrefcount()")
     def test_using_unseen_interned_string_bumps_refcount_permanently(self):
         # Please don't use this as a name in a different test.
         unseen_name = 'abcdefghi'
@@ -1404,6 +1406,7 @@ class TestNamedTensor(TestCase):
         new_refcnt = sys.getrefcount(unseen_name)
         self.assertEqual(new_refcnt, old_refcnt + 1)
 
+    @unittest.skip("no sys.getrefcount()")
     def test_using_unseen_uninterned_string_refcounts(self):
         # Please don't use this as a name in a different test.
         # non-compile-time constants are not interned
