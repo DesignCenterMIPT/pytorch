@@ -1312,8 +1312,58 @@ void THPVariable_subclass_dealloc(PyObject* self) {
   // that finalizers are handled correctly
   PyTypeObject* type = Py_TYPE(self);
   TORCH_INTERNAL_ASSERT(type->tp_flags & Py_TPFLAGS_HEAPTYPE);
-  // FIXME: inspect the issue with type 'Tensor' on PyPy and uncomment!
+  // Although it will not fix PyPy GC issues with Tensor objects,
+  // non-GC types should also be deallocated properly.
+  // Since this function is directly borrowed from CPython's subclass_dealloc
+  // with little modifications
+  // (see https://github.com/pytorch/pytorch/pull/56017),
+  // adapt non-GC part from here keeping the current context in mind.
+  // NOTE: non-GC part is active only on PyPy, CPython faces no issues here.
   // TORCH_INTERNAL_ASSERT(PyType_IS_GC(type), "GC types not implemented");
+
+  if (!PyType_IS_GC(type)) {
+    /* A non GC dynamic type allows certain simplifications:
+    there's no need to call clear_slots(), or DECREF the dict,
+    or clear weakrefs. */
+    if (type->tp_finalize) {
+      if (PyObject_CallFinalizerFromDealloc(self) < 0) {
+        /* Resurrected */
+        return;
+      }
+    }
+    if (type->tp_del) {
+      type->tp_del(self);
+      if (self->ob_refcnt > 0) {
+        /* Resurrected */
+        return;
+      }
+    }
+    // Find the base until we get to base class THPVariableType
+    {
+      PyTypeObject* base = type;
+      while (base != &THPVariableType) {
+        base = base->tp_base;
+        TORCH_INTERNAL_ASSERT(base);
+      }
+    }
+
+    // subtype_dealloc allows for this but we don't
+    TORCH_INTERNAL_ASSERT(Py_TYPE(self) == type);
+
+    // Finally clear out the base THPVariable
+    THPVariable_clear((THPVariable*)self);
+    ((THPVariable*)self)->cdata.~MaybeOwned<Variable>();
+    Py_TYPE(self)->tp_free(self);
+
+    // Python defined subclasses should always be on the heap
+    TORCH_INTERNAL_ASSERT(type->tp_flags & Py_TPFLAGS_HEAPTYPE);
+    Py_DECREF(type);
+
+    /* Done */
+    return;
+  }
+
+  /* We get here only if the type has GC */
 
   PyObject_GC_UnTrack(self);
   // TODO: consider using trash can
@@ -1351,14 +1401,11 @@ void THPVariable_subclass_dealloc(PyObject* self) {
        being finalized that has already been destroyed. */
     if (type->tp_weaklistoffset) {
       /* Modeled after GET_WEAKREFS_LISTPTR() */
-      #if defined(PYPY_VERSION)
-      TORCH_CHECK(false);
-      #else
+#define PyWeakReference PyObject
       PyWeakReference** list =
           (PyWeakReference**)PyObject_GET_WEAKREFS_LISTPTR(self);
       while (*list)
         _PyWeakref_ClearRef(*list);
-      #endif
     }
   }
 
@@ -1488,12 +1535,12 @@ static int traverse_slots(
   PyMemberDef* mp;
 
   n = Py_SIZE(type);
-  #if defined(PYPY_VERSION)
+#if defined(PYPY_VERSION)
   // TODO: Fix this for real instead of crashing
   TORCH_CHECK(false);
-  #else
+#else
   mp = PyHeapType_GET_MEMBERS((PyHeapTypeObject*)type);
-  #endif
+#endif
   for (i = 0; i < n; i++, mp++) {
     if (mp->type == T_OBJECT_EX) {
       char* addr = (char*)self + mp->offset;
