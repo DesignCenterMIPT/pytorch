@@ -1118,7 +1118,14 @@ static struct PyGetSetDef THPVariable_properties[] = {
   {"is_mlc", (getter)THPVariable_is_mlc, nullptr, nullptr, nullptr},
   {"is_ort", (getter)THPVariable_is_ort, nullptr, nullptr, nullptr},
   {"is_vulkan", (getter)THPVariable_is_vulkan, nullptr, nullptr, nullptr},
+  /*
+  Commented due to PyPy issue:
+  On PyPy is_complex becomes an atribute, instead of bound method
+  see more: https://pm-miptdesign.ru/projects/pypy/wiki/Pytorch
+  */
+#if !defined(PYPY_VERSION) 
   {"is_complex", (getter)THPVariable_is_complex, nullptr, nullptr, nullptr},
+#endif
   {"is_quantized", (getter)THPVariable_is_quantized, nullptr, nullptr, nullptr},
   {"is_meta", (getter)THPVariable_is_meta, nullptr, nullptr, nullptr},
   {"dtype", (getter)THPVariable_dtype, nullptr, nullptr, nullptr},
